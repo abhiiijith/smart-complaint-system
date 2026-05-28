@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.dependency import get_db
 from app.models.complaint_model import Complaint
 from app.schemas.complaint_schema import ComplaintCreate
+from app.services.auth_handler import get_current_user
 
 router = APIRouter()
 
@@ -11,7 +12,8 @@ router = APIRouter()
 @router.post("/complaints")
 def create_complaint(
     complaint: ComplaintCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
 
     new_complaint = Complaint(
@@ -34,7 +36,8 @@ def create_complaint(
 
 @router.get("/complaints")
 def get_complaints(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
 
     complaints = db.query(Complaint).all()
@@ -46,7 +49,8 @@ def get_complaints(
 def update_complaint_status(
     complaint_id: int,
     status: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
 
     complaint = db.query(Complaint).filter(
@@ -73,7 +77,8 @@ def update_complaint_status(
 @router.delete("/complaints/{complaint_id}")
 def delete_complaint(
     complaint_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
 
     complaint = db.query(Complaint).filter(
