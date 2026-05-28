@@ -1,25 +1,45 @@
-from fastapi import APIRouter, Depends
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    UploadFile,
+    Form,
+    HTTPException
+)
+
 from sqlalchemy.orm import Session
 
-from app.database.dependency import get_db
+from app.database.dependency import (
+    get_db,
+    get_current_user
+)
+
 from app.models.complaint_model import Complaint
-from app.schemas.complaint_schema import ComplaintCreate
-from app.services.auth_handler import get_current_user
-from fastapi import File, UploadFile
+from app.models.user_model import User
+
 import shutil
+
 
 router = APIRouter()
 
 
+# =========================
+# CREATE COMPLAINT
+# =========================
+
 @router.post("/complaints")
 def create_complaint(
-    title: str,
-    description: str,
-    category: str,
-    location: str,
+
+    title: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...),
+    location: str = Form(...),
+
     image: UploadFile = File(None),
+
     db: Session = Depends(get_db),
-   # current_user: str = Depends(get_current_user)
+
+    current_user: User = Depends(get_current_user)
 ):
 
     image_path = None
@@ -29,12 +49,14 @@ def create_complaint(
         image_path = f"uploads/{image.filename}"
 
         with open(image_path, "wb") as buffer:
+
             shutil.copyfileobj(
                 image.file,
                 buffer
             )
 
     new_complaint = Complaint(
+
         title=title,
         description=description,
         category=category,
@@ -49,15 +71,22 @@ def create_complaint(
     db.refresh(new_complaint)
 
     return {
+
         "message": "Complaint created successfully",
         "image": image_path
     }
 
 
+# =========================
+# GET ALL COMPLAINTS
+# =========================
+
 @router.get("/complaints")
 def get_complaints(
+
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+
+    current_user: User = Depends(get_current_user)
 ):
 
     complaints = db.query(Complaint).all()
@@ -65,20 +94,43 @@ def get_complaints(
     return complaints
 
 
+# =========================
+# UPDATE COMPLAINT STATUS
+# =========================
+
 @router.put("/complaints/{complaint_id}")
 def update_complaint_status(
+
     complaint_id: int,
+
     status: str,
+
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+
+    current_user: User = Depends(get_current_user)
 ):
 
+    # ONLY OPERATOR CAN UPDATE
+
+    if current_user.role != "operator":
+
+        raise HTTPException(
+
+            status_code=403,
+
+            detail="Only operators can update complaint status"
+        )
+
     complaint = db.query(Complaint).filter(
+
         Complaint.id == complaint_id
+
     ).first()
 
     if not complaint:
+
         return {
+
             "message": "Complaint not found"
         }
 
@@ -89,24 +141,48 @@ def update_complaint_status(
     db.refresh(complaint)
 
     return {
+
         "message": "Complaint status updated",
+
         "updated_status": complaint.status
     }
 
 
+# =========================
+# DELETE COMPLAINT
+# =========================
+
 @router.delete("/complaints/{complaint_id}")
 def delete_complaint(
+
     complaint_id: int,
+
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+
+    current_user: User = Depends(get_current_user)
 ):
 
+    # ONLY OPERATOR CAN DELETE
+
+    if current_user.role != "operator":
+
+        raise HTTPException(
+
+            status_code=403,
+
+            detail="Only operators can delete complaints"
+        )
+
     complaint = db.query(Complaint).filter(
+
         Complaint.id == complaint_id
+
     ).first()
 
     if not complaint:
+
         return {
+
             "message": "Complaint not found"
         }
 
@@ -115,5 +191,6 @@ def delete_complaint(
     db.commit()
 
     return {
+
         "message": "Complaint deleted successfully"
     }
