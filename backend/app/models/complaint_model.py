@@ -17,3 +17,5 @@ class Complaint(Base):
     location = Column(String)
 
     status = Column(String, default="Pending")
+
+    image = Column(String, nullable=True)

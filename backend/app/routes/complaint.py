@@ -5,22 +5,41 @@ from app.database.dependency import get_db
 from app.models.complaint_model import Complaint
 from app.schemas.complaint_schema import ComplaintCreate
 from app.services.auth_handler import get_current_user
+from fastapi import File, UploadFile
+import shutil
 
 router = APIRouter()
 
 
 @router.post("/complaints")
 def create_complaint(
-    complaint: ComplaintCreate,
+    title: str,
+    description: str,
+    category: str,
+    location: str,
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+   # current_user: str = Depends(get_current_user)
 ):
 
+    image_path = None
+
+    if image:
+
+        image_path = f"uploads/{image.filename}"
+
+        with open(image_path, "wb") as buffer:
+            shutil.copyfileobj(
+                image.file,
+                buffer
+            )
+
     new_complaint = Complaint(
-        title=complaint.title,
-        description=complaint.description,
-        category=complaint.category,
-        location=complaint.location
+        title=title,
+        description=description,
+        category=category,
+        location=location,
+        image=image_path
     )
 
     db.add(new_complaint)
@@ -30,7 +49,8 @@ def create_complaint(
     db.refresh(new_complaint)
 
     return {
-        "message": "Complaint created successfully"
+        "message": "Complaint created successfully",
+        "image": image_path
     }
 
 
