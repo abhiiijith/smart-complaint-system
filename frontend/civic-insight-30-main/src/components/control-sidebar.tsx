@@ -13,6 +13,10 @@ export function ControlSidebar() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const user = getStoredUser();
+  if (!user) {
+  navigate({ to: "/login" });
+  return null;
+}
 
   const logout = () => {
     setToken(null);
@@ -68,9 +72,9 @@ export function ControlSidebar() {
             {(user?.name || user?.email || "U").slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium truncate">{user?.name || "Operator"}</div>
+            <div className="text-sm font-medium truncate"> { user?.email || "Not logged in"}</div>
             <div className="text-[11px] text-muted-foreground truncate">
-              {user?.email || "guest@grid"}
+              {user?.email || ""}
             </div>
           </div>
         </div>
