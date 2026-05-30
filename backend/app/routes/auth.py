@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.services.security import hash_password
 from app.schemas.user_schema import UserLogin
@@ -7,13 +7,26 @@ from app.schemas.user_schema import UserCreate
 from app.models.user_model import User
 from app.database.dependency import get_db
 from app.services.security import create_access_token
-from app.services.security import create_access_token
 
 router = APIRouter()
 
 
 @router.post("/register")
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
+
+    existing_user = db.query(User).filter(
+        User.email == user.email
+    ).first()
+
+    if existing_user:
+
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered"
+        )
 
     new_user = User(
         name=user.name,
@@ -22,7 +35,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     )
 
     db.add(new_user)
+
     db.commit()
+
     db.refresh(new_user)
 
     return {
@@ -48,9 +63,6 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
             "message": "Invalid password"
         }
     
-    token = create_access_token(
-    data={"sub": existing_user.email}
-    )
 
 
     token = create_access_token(
